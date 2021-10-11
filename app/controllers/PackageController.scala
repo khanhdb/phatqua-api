@@ -1,10 +1,12 @@
 package controllers
 
 import controllers.action.{Admin, Authenticated}
+import play.api.Logger
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
 import repository.PackageRepository
+import util.VerifyCodeGenerator
 
 import javax.inject._
 import scala.io.Source
@@ -16,6 +18,8 @@ class PackageController @Inject()(cc: ControllerComponents,
                                   admin: Admin,
                                   authenticatd: Authenticated,
                                   packageRepository: PackageRepository) extends AbstractController(cc) {
+
+  private val logger = Logger(this.getClass)
 
   def create(campaignId: Int): Action[MultipartFormData[Files.TemporaryFile]] = admin(parse.multipartFormData) { request =>
     request.body.file("packages") match {
@@ -31,6 +35,22 @@ class PackageController @Inject()(cc: ControllerComponents,
 
   def allPackages: Action[AnyContent] = authenticatd(parse.anyContent){ _ =>
     Ok(Json.toJson(packageRepository.allPackages))
+  }
+
+  def resendVerifyCode(phone: String): Action[AnyContent]  = authenticatd(parse.anyContent) { request =>
+    val newCode = VerifyCodeGenerator.next()
+    if (request.username == "admin"){
+      NotAcceptable("only officer account can resend")
+    } else {
+      packageRepository.updateVerifyCode(newCode, phone, request.username) match {
+        case 1 =>
+          //TODO send SMS
+          logger.debug(s"new code : $newCode sent to $phone")
+          Ok
+        case _ =>
+          NotFound(s"phone number: $phone not found")
+      }
+    }
   }
 }
 

@@ -8,4 +8,5 @@ DELETE   /officer/:username             controllers.UserController.deleteOfficer
 POST     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)
 POST     /packages/:campaignId            controllers.PackageController.create(campaignId: Int)
-GET     /packages            controllers.PackageController.allPackages
+GET      /packages            controllers.PackageController.allPackages
+GET      /resend-verify-code/:phone            controllers.PackageController.resendVerifyCode(phone: String)

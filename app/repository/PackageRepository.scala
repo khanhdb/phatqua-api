@@ -10,7 +10,7 @@ import repository.PackageStatus.PackageStatus
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.Failure
+import scala.util.{Failure, Try}
 
 @Singleton
 class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRepository {
@@ -33,6 +33,21 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
       .executeQuery().as(Package.parser.*)
   )
 
+  def packagesByOfficer(officer: String): List[Package] = db.withConnection{implicit connection =>
+    SQL("SELECT package.name, phone, status, cam.name as campaign FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+      "WHERE updated_by={officer}")
+      .on(Symbol("officer") -> officer)
+      .executeQuery().as(Package.parser.*)
+  }
+
+  def updateVerifyCode(newCode: String, phone: String, officer: String): Int = Try( db.withConnection{implicit connection =>
+    SQL("UPDATE package set verify_code = {newCode}, updated_by={officer}, updated_at=NOW() WHERE phone={phone}")
+      .on(
+        Symbol("newCode") -> newCode,
+        Symbol("phone") -> phone,
+        Symbol("officer") -> officer,
+      ).executeUpdate()
+  }).getOrElse(0)
 }
 
 case class Package(name: String, phone: String, status: PackageStatus, campaign: String)
