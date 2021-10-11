@@ -7,3 +7,5 @@ POST     /officer             controllers.UserController.createOfficer
 DELETE   /officer/:username             controllers.UserController.deleteOfficer(username: String)
 POST     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)
+POST     /packages/:campaignId            controllers.PackageController.create(campaignId: Int)
+GET     /packages            controllers.PackageController.allPackages
