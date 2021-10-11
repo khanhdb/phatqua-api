@@ -1,6 +1,6 @@
 package controllers
 
-import controllers.action.Admin
+import controllers.action.AdminPermission
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
 import repository.CampaignRepository
@@ -10,8 +10,8 @@ import javax.inject._
 
 @Singleton
 class CampaignController @Inject()(cc: ControllerComponents,
-                               admin: Admin,
-                               campaignRepository: CampaignRepository) extends AbstractController(cc) {
+                                   admin: AdminPermission,
+                                   campaignRepository: CampaignRepository) extends AbstractController(cc) {
 
   def create: Action[Campaign] = admin(parse.json[Campaign]) { request =>
     campaignRepository.create(request.body) match {

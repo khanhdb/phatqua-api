@@ -1,9 +1,9 @@
 package controllers
 
-import controllers.action.{Admin, Authenticated}
+import controllers.action.{AdminPermission, Authenticated, LoggedIn, OfficerPermission}
 import play.api.Logger
 import play.api.libs.Files
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
 import repository.PackageRepository
 import util.VerifyCodeGenerator
@@ -15,8 +15,9 @@ import scala.util.{Failure, Success, Using}
 
 @Singleton
 class PackageController @Inject()(cc: ControllerComponents,
-                                  admin: Admin,
-                                  authenticatd: Authenticated,
+                                  admin: AdminPermission,
+                                  officerPermission: OfficerPermission,
+                                  loggedIn: LoggedIn,
                                   packageRepository: PackageRepository) extends AbstractController(cc) {
 
   private val logger = Logger(this.getClass)
@@ -33,11 +34,20 @@ class PackageController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def allPackages: Action[AnyContent] = authenticatd(parse.anyContent){ _ =>
+  def allPackages: Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
     Ok(Json.toJson(packageRepository.allPackages))
   }
 
-  def resendVerifyCode(phone: String): Action[AnyContent]  = authenticatd(parse.anyContent) { request =>
+  def confirmReceivingPackage: Action[ConfirmData] = officerPermission(parse.json[ConfirmData]) {request =>
+     packageRepository.confirmReceivingPackage(request.body.phone, request.body.code, request.username) match {
+       case 1 =>
+         Ok
+       case _ =>
+         NotFound("số điện thoại hoặc verify code không hợp lệ")
+     }
+  }
+
+  def resendVerifyCode(phone: String): Action[AnyContent]  = officerPermission(parse.anyContent) { request =>
     val newCode = VerifyCodeGenerator.next()
     if (request.username == "admin"){
       NotAcceptable("only officer account can resend")
@@ -76,4 +86,10 @@ object CreatePackage {
         Nil
     }
   }
+}
+
+case class ConfirmData(phone: String, code: String)
+
+object ConfirmData{
+  implicit val fmt: OFormat[ConfirmData] = Json.format[ConfirmData]
 }

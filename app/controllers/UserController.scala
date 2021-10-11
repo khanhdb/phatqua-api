@@ -1,6 +1,6 @@
 package controllers
 
-import controllers.action.Admin
+import controllers.action.AdminPermission
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
 import repository.{Password, UserRepository, Username}
@@ -11,7 +11,7 @@ import scala.util.{Failure, Success}
 
 @Singleton
 class UserController @Inject()(cc: ControllerComponents,
-                               admin: Admin,
+                               admin: AdminPermission,
                                userRepository: UserRepository) extends AbstractController(cc) {
 
   def createOfficer: Action[Officer] = admin(parse.json[Officer]) { request =>

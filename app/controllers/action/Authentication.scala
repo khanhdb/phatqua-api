@@ -7,19 +7,19 @@ import play.api.mvc.{ActionBuilder, AnyContent, BodyParsers, Request, Result, Wr
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-@Singleton
-class Authenticated @Inject()(override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
-  extends ActionBuilder[UserRequest,AnyContent]{
+trait Authenticated extends ActionBuilder[UserRequest,AnyContent]{
 
   private val logger = Logger(this.getClass)
 
+  def usernameCondition(username: String): Boolean
+
   override def invokeBlock[A](request: Request[A], block: UserRequest[A] => Future[Result]): Future[Result] = {
     request.session.get("username") match {
-      case None =>
-        Future.successful(Unauthorized)
-      case Some(username) =>
+      case Some(username) if usernameCondition(username) =>
         logger.debug(s"user $username passed authentication")
         block(UserRequest(username, request))
+      case _ =>
+        Future.successful(Unauthorized)
     }
   }
 }
@@ -28,20 +28,17 @@ case class UserRequest[A](username: String, request: Request[A]) extends Wrapped
 
 
 @Singleton
-class Admin @Inject()(override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext)
-  extends ActionBuilder[UserRequest,AnyContent] {
-
-  private val logger = Logger(this.getClass)
-
-  override def invokeBlock[A](request: Request[A], block: UserRequest[A] => Future[Result]): Future[Result] = {
-    request.session.get("username") match {
-      case Some(username) if username == "admin" =>
-        logger.debug(s"user $username passed admin authentication")
-        block(UserRequest(username, request))
-      case _ =>
-        Future.successful(Unauthorized("you need admin permission"))
-    }
-  }
+class AdminPermission @Inject()(override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends Authenticated{
+  override def usernameCondition(username: String): Boolean = username == "admin"
 }
 
 
+@Singleton
+class OfficerPermission @Inject()(override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends Authenticated{
+  override def usernameCondition(username: String): Boolean = username != "admin"
+}
+
+@Singleton
+class LoggedIn @Inject()(override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends Authenticated{
+  override def usernameCondition(username: String): Boolean = true
+}

@@ -5,7 +5,7 @@ import controllers.CreatePackage
 import play.api.Logger
 import play.api.db.DBApi
 import play.api.libs.json._
-import repository.PackageStatus.PackageStatus
+import repository.PackageStatus.{DONE, PackageStatus}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,6 +32,16 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
     SQL("SELECT package.name, phone, status, cam.name as campaign FROM package JOIN campaign cam on cam.id = package.campaign_id")
       .executeQuery().as(Package.parser.*)
   )
+
+  def confirmReceivingPackage(phone: String, code: String, officer: String): Int = Try( db.withConnection{implicit connection =>
+    SQL(s"UPDATE package set status={status}, updated_by={officer}, updated_at=NOW() WHERE phone={phone} AND verify_code={code} AND status <> ${DONE.id}")
+      .on(
+        Symbol("code") -> code,
+        Symbol("status") -> PackageStatus.DONE.id,
+        Symbol("phone") -> phone,
+        Symbol("officer") -> officer,
+      ).executeUpdate()
+  }).getOrElse(0)
 
   def packagesByOfficer(officer: String): List[Package] = db.withConnection{implicit connection =>
     SQL("SELECT package.name, phone, status, cam.name as campaign FROM package JOIN campaign cam on cam.id = package.campaign_id " +
