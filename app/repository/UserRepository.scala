@@ -1,9 +1,9 @@
 package repository
 
-import anorm.{SQL, SqlParser}
+import anorm.SQL
 import anorm.SqlParser.{scalar, str}
-import play.api.db.DBApi
 import com.github.t3hnar.bcrypt._
+import play.api.db.DBApi
 
 import javax.inject.{Inject, Singleton}
 import scala.util.Try
