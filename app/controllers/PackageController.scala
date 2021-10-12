@@ -56,24 +56,23 @@ class PackageController @Inject()(cc: ControllerComponents,
 
   def initVerifyCode: Action[List[InitVerifyCode]] = officerPermission(parse.json[List[InitVerifyCode]]){request =>
     if (request.username == "admin"){
-      NotAcceptable("only officer account can resend")
+       NotAcceptable("only officer account can resend")
     } else {
-      request.body.foreach { initVerifyCode =>
-        val newCode = VerifyCodeGenerator.next()
-        smsSender.send(initVerifyCode.phone, initVerifyCode.note).map {_ =>
-          packageRepository.initVerifyCode(newCode, initVerifyCode.phone, request.username, initVerifyCode.note) match {
-            case 1 =>
-            case _ =>
-              logger.debug(s"phone number: ${initVerifyCode.phone} not found")
-          }
-        }
-      }
+       VerifyCodeGenerator.genCodes(request.body.length, packageRepository.verifyCodes) zip request.body foreach{case(newCode, initVerifyCode) =>
+         smsSender.send(initVerifyCode.phone, initVerifyCode.note).map {_ =>
+           packageRepository.initVerifyCode(newCode, initVerifyCode.phone, request.username, initVerifyCode.note) match {
+             case 1 =>
+             case _ =>
+               logger.debug(s"phone number: ${initVerifyCode.phone} not found")
+           }
+         }
+       }
       Ok
     }
   }
 
   def resendVerifyCode: Action[InitVerifyCode]  = officerPermission(parse.json[InitVerifyCode]).async{ request =>
-    val newCode = VerifyCodeGenerator.next()
+    val newCode = VerifyCodeGenerator.next(packageRepository.verifyCodes)
     if (request.username == "admin"){
        Future.successful(NotAcceptable("only officer account can resend"))
     } else {

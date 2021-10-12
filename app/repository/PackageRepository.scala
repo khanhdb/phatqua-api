@@ -81,6 +81,10 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
         Symbol("officer") -> officer,
       ).executeUpdate()
   }).getOrElse(0)
+
+  def verifyCodes: List[String] = db.withConnection{implicit connection =>
+    SQL("SELECT verify_code FROM package").executeQuery.as(SqlParser.str(1).*)
+  }
 }
 
 case class Package(name: String, phone: String, status: PackageStatus, campaign: String)
