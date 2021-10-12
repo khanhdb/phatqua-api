@@ -10,4 +10,5 @@ POST     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)
 POST     /packages/:campaignId            controllers.PackageController.create(campaignId: Int)
 GET      /packages            controllers.PackageController.allPackages
-GET      /resend-verify-code/:phone            controllers.PackageController.resendVerifyCode(phone: String)
+POST     /officer/resend-verify-code            controllers.PackageController.resendVerifyCode
+POST     /officer/init-verify-code            controllers.PackageController.initVerifyCode

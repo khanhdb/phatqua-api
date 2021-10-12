@@ -5,7 +5,7 @@ import controllers.CreatePackage
 import play.api.Logger
 import play.api.db.DBApi
 import play.api.libs.json._
-import repository.PackageStatus.{DONE, PackageStatus}
+import repository.PackageStatus.{DONE, PLANNED, PackageStatus}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -49,6 +49,17 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
       .on(Symbol("officer") -> officer)
       .executeQuery().as(Package.parser.*)
   }
+
+  def initVerifyCode(newCode: String, phone: String, officer: String, note: String): Int = Try( db.withConnection{implicit connection =>
+    SQL(s"UPDATE package set verify_code={newCode},note={note},updated_by={officer},updated_at=NOW(), status={status} WHERE phone={phone} AND status <> ${PLANNED.id}")
+      .on(
+        Symbol("newCode") -> newCode,
+        Symbol("phone") -> phone,
+        Symbol("officer") -> officer,
+        Symbol("note") -> note,
+        Symbol("status") -> PackageStatus.PLANNED.id,
+      ).executeUpdate()
+  }).getOrElse(0)
 
   def updateVerifyCode(newCode: String, phone: String, officer: String): Int = Try( db.withConnection{implicit connection =>
     SQL("UPDATE package set verify_code = {newCode}, updated_by={officer}, updated_at=NOW() WHERE phone={phone}")

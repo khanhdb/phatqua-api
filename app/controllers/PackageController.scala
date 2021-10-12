@@ -1,14 +1,17 @@
 package controllers
 
-import controllers.action.{AdminPermission, Authenticated, LoggedIn, OfficerPermission}
+import controllers.action.{AdminPermission, LoggedIn, OfficerPermission}
 import play.api.Logger
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
 import repository.PackageRepository
+import services.SmsSender
 import util.VerifyCodeGenerator
 
 import javax.inject._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.io.Source
 import scala.util.{Failure, Success, Using}
 
@@ -18,6 +21,7 @@ class PackageController @Inject()(cc: ControllerComponents,
                                   admin: AdminPermission,
                                   officerPermission: OfficerPermission,
                                   loggedIn: LoggedIn,
+                                  smsSender: SmsSender,
                                   packageRepository: PackageRepository) extends AbstractController(cc) {
 
   private val logger = Logger(this.getClass)
@@ -47,18 +51,36 @@ class PackageController @Inject()(cc: ControllerComponents,
      }
   }
 
-  def resendVerifyCode(phone: String): Action[AnyContent]  = officerPermission(parse.anyContent) { request =>
-    val newCode = VerifyCodeGenerator.next()
+  def initVerifyCode: Action[List[InitVerifyCode]] = officerPermission(parse.json[List[InitVerifyCode]]){request =>
     if (request.username == "admin"){
       NotAcceptable("only officer account can resend")
     } else {
-      packageRepository.updateVerifyCode(newCode, phone, request.username) match {
-        case 1 =>
-          //TODO send SMS
-          logger.debug(s"new code : $newCode sent to $phone")
-          Ok
-        case _ =>
-          NotFound(s"phone number: $phone not found")
+      request.body.foreach { initVerifyCode =>
+        val newCode = VerifyCodeGenerator.next()
+        smsSender.send(initVerifyCode.phone, initVerifyCode.note).map {_ =>
+          packageRepository.initVerifyCode(newCode, initVerifyCode.phone, request.username, initVerifyCode.note) match {
+            case 1 =>
+            case _ =>
+              logger.debug(s"phone number: ${initVerifyCode.phone} not found")
+          }
+        }
+      }
+      Ok
+    }
+  }
+
+  def resendVerifyCode: Action[InitVerifyCode]  = officerPermission(parse.json[InitVerifyCode]).async{ request =>
+    val newCode = VerifyCodeGenerator.next()
+    if (request.username == "admin"){
+       Future.successful(NotAcceptable("only officer account can resend"))
+    } else {
+      smsSender.send(request.body.phone, request.body.note) map { _ =>
+        packageRepository.updateVerifyCode(newCode, request.body.phone, request.username) match {
+          case 1 =>
+            Ok
+          case _ =>
+            NotFound(s"phone number: ${request.body.phone} not found")
+        }
       }
     }
   }
@@ -92,4 +114,10 @@ case class ConfirmData(phone: String, code: String)
 
 object ConfirmData{
   implicit val fmt: OFormat[ConfirmData] = Json.format[ConfirmData]
+}
+
+case class InitVerifyCode(phone: String, note: String)
+
+object InitVerifyCode{
+  implicit val fmt: OFormat[InitVerifyCode] = Json.format[InitVerifyCode]
 }
