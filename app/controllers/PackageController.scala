@@ -5,7 +5,7 @@ import play.api.Logger
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc._
-import repository.PackageRepository
+import repository.{PackageRepository, PackageStatus}
 import services.SmsSender
 import util.VerifyCodeGenerator
 
@@ -38,10 +38,13 @@ class PackageController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def allPackages: Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
-    Ok(Json.toJson(packageRepository.allPackages))
+  def packageByStatus(campaignId: Int, status: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
+    Ok(Json.toJson(packageRepository.packagesByStatus(campaignId, PackageStatus(status))))
   }
 
+  def allPackages(campaignId: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
+    Ok(Json.toJson(packageRepository.allPackages(campaignId)))
+  }
   def confirmReceivingPackage: Action[ConfirmData] = officerPermission(parse.json[ConfirmData]) {request =>
      packageRepository.confirmReceivingPackage(request.body.phone, request.body.code, request.username) match {
        case 1 =>
