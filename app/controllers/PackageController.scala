@@ -45,6 +45,16 @@ class PackageController @Inject()(cc: ControllerComponents,
   def allPackages(campaignId: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
     Ok(Json.toJson(packageRepository.allPackages(campaignId)))
   }
+
+  def lookupCode(code: String): Action[AnyContent] = officerPermission(parse.anyContent) {_ =>
+    packageRepository.packageByVerifyCode(code) match {
+      case None =>
+        NotFound(s"package with code $code not found")
+      case Some(pkage) =>
+        Ok(Json.toJson(pkage))
+    }
+  }
+
   def confirmReceivingPackage(code: String): Action[AnyContent] = officerPermission(parse.anyContent) {request =>
      packageRepository.packageByVerifyCode(code) match {
        case None =>
@@ -86,6 +96,10 @@ class PackageController @Inject()(cc: ControllerComponents,
         }
       }
     }
+  }
+
+  def packageByOfficer: Action[AnyContent] = officerPermission(parse.anyContent){request =>
+    Ok(Json.toJson(packageRepository.packagesByOfficer(request.username)))
   }
 }
 

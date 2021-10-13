@@ -4,12 +4,15 @@
 GET      /                    controllers.HomeController.index
 POST     /login               controllers.AuthenticationController.login
 POST     /officer             controllers.UserController.createOfficer
+GET     /officer/look-up/:code             controllers.PackageController.lookupCode(code: String)
 GET     /officer/confirm-code/:confirmCode             controllers.PackageController.confirmReceivingPackage(confirmCode: String)
 DELETE   /officer/:username             controllers.UserController.deleteOfficer(username: String)
 POST     /campaign            controllers.CampaignController.create
+GET     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)
 POST     /packages/:campaignId            controllers.PackageController.create(campaignId: Int)
 GET      /packages/:campaignId            controllers.PackageController.allPackages(campaignId: Int)
 GET      /packages-by-status/:campaginId/:status            controllers.PackageController.packageByStatus(campaginId: Int, status: Int)
-POST     /officer/resend-verify-code            controllers.PackageController.resendVerifyCode
-POST     /officer/init-verify-code            controllers.PackageController.initVerifyCode
+POST     /officer/resend-verify-code        controllers.PackageController.resendVerifyCode
+POST     /officer/init-verify-code          controllers.PackageController.initVerifyCode
+GET     /officer/packages                  controllers.PackageController.packageByOfficer

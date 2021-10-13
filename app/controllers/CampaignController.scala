@@ -13,7 +13,16 @@ class CampaignController @Inject()(cc: ControllerComponents,
                                    admin: AdminPermission,
                                    campaignRepository: CampaignRepository) extends AbstractController(cc) {
 
-  def create: Action[Campaign] = admin(parse.json[Campaign]) { request =>
+  def create: Action[CreateCampaign] = admin(parse.json[CreateCampaign]) { request =>
+    campaignRepository.create(request.body) match {
+      case Some(id) =>
+        Ok(s"created new campaign with id $id")
+      case None =>
+        NotModified
+    }
+  }
+
+  def allCampaign: Action[CreateCampaign] = admin(parse.json[CreateCampaign]) { request =>
     campaignRepository.create(request.body) match {
       case Some(id) =>
         Ok(s"created new campaign with id $id")
@@ -32,8 +41,8 @@ class CampaignController @Inject()(cc: ControllerComponents,
   }
 }
 
-case class Campaign(name: String, location: String)
+case class CreateCampaign(name: String, location: String)
 
-object Campaign{
-  implicit val fmt: OFormat[Campaign] = Json.format[Campaign]
+object CreateCampaign{
+  implicit val fmt: OFormat[CreateCampaign] = Json.format[CreateCampaign]
 }
