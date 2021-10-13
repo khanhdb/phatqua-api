@@ -63,6 +63,13 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
       .executeQuery().as(Package.parser.*)
   }
 
+  def packageByVerifyCode(code: String): Option[Package] = db.withConnection{implicit connection =>
+    SQL("SELECT package.name, phone, status, cam.name as campaign FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+      "WHERE verify_code={code}")
+      .on(Symbol("code") -> code)
+      .executeQuery().as(Package.parser.singleOpt)
+  }
+
   def initVerifyCode(newCode: String, phone: String, officer: String, note: String): Int = Try( db.withConnection{implicit connection =>
     SQL(s"UPDATE package set verify_code={newCode},note={note},updated_by={officer},updated_at=NOW(), status={status} WHERE phone={phone} AND status <> ${PLANNED.id}")
       .on(

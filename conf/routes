@@ -4,7 +4,7 @@
 GET      /                    controllers.HomeController.index
 POST     /login               controllers.AuthenticationController.login
 POST     /officer             controllers.UserController.createOfficer
-POST     /officer/confirm-code             controllers.PackageController.confirmReceivingPackage
+GET     /officer/confirm-code/:confirmCode             controllers.PackageController.confirmReceivingPackage(confirmCode: String)
 DELETE   /officer/:username             controllers.UserController.deleteOfficer(username: String)
 POST     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)

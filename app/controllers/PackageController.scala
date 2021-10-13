@@ -45,12 +45,13 @@ class PackageController @Inject()(cc: ControllerComponents,
   def allPackages(campaignId: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
     Ok(Json.toJson(packageRepository.allPackages(campaignId)))
   }
-  def confirmReceivingPackage: Action[ConfirmData] = officerPermission(parse.json[ConfirmData]) {request =>
-     packageRepository.confirmReceivingPackage(request.body.phone, request.body.code, request.username) match {
-       case 1 =>
-         Ok
-       case _ =>
-         NotFound("số điện thoại hoặc verify code không hợp lệ")
+  def confirmReceivingPackage(code: String): Action[AnyContent] = officerPermission(parse.anyContent) {request =>
+     packageRepository.packageByVerifyCode(code) match {
+       case None =>
+         NotFound(s"package with code $code not found")
+       case Some(pkage) =>
+         packageRepository.confirmReceivingPackage(pkage.phone, code, request.username)
+         Ok(Json.toJson(pkage))
      }
   }
 
@@ -110,12 +111,6 @@ object CreatePackage {
         Nil
     }
   }
-}
-
-case class ConfirmData(phone: String, code: String)
-
-object ConfirmData{
-  implicit val fmt: OFormat[ConfirmData] = Json.format[ConfirmData]
 }
 
 case class InitVerifyCode(phone: String, note: String)
