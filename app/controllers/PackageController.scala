@@ -56,11 +56,11 @@ class PackageController @Inject()(cc: ControllerComponents,
 
   def initVerifyCode: Action[List[InitVerifyCode]] = officerPermission(parse.json[List[InitVerifyCode]]){request =>
     if (request.username == "admin"){
-       NotAcceptable("only officer account can resend")
+       NotAcceptable("only officer account can submit")
     } else {
-       VerifyCodeGenerator.genCodes(request.body.length, packageRepository.verifyCodes) zip request.body foreach{case(newCode, initVerifyCode) =>
+       VerifyCodeGenerator.genCodes(request.body.length, packageRepository.verifyCodes) zip request.body foreach{case(code, initVerifyCode) =>
          smsSender.send(initVerifyCode.phone, initVerifyCode.note).map {_ =>
-           packageRepository.initVerifyCode(newCode, initVerifyCode.phone, request.username, initVerifyCode.note) match {
+           packageRepository.initVerifyCode(code, initVerifyCode.phone, request.username, initVerifyCode.note) match {
              case 1 =>
              case _ =>
                logger.debug(s"phone number: ${initVerifyCode.phone} not found")

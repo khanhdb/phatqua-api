@@ -16,10 +16,11 @@ import scala.util.{Failure, Try}
 class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRepository {
   private val logger = Logger(this.getClass)
   def create(pkg: CreatePackage): Future[Option[String]] = Future(db.withConnection{ implicit connection =>
-    SQL("INSERT INTO package(name, phone, campaign_id) VALUES({name}, {phone}, {campaign_id})").on(
+    SQL("INSERT INTO package(name, phone, campaign_id, verify_code) VALUES({name}, {phone}, {campaign_id}, {verify_code})").on(
         Symbol("name") -> pkg.name,
         Symbol("phone") ->pkg.phone,
-        Symbol("campaign_id") -> pkg.campaignId
+        Symbol("campaign_id") -> pkg.campaignId,
+        Symbol("verify_code") -> ""
     ).executeInsert(SqlParser.scalar[String].singleOpt)
   }).andThen{
     case Failure(exception) =>
@@ -83,7 +84,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }).getOrElse(0)
 
   def verifyCodes: List[String] = db.withConnection{implicit connection =>
-    SQL("SELECT verify_code FROM package").executeQuery.as(SqlParser.str(1).*)
+    SQL("SELECT verify_code FROM package").executeQuery().as(SqlParser.str(1).*)
   }
 }
 
