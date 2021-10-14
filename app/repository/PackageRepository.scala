@@ -32,7 +32,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
 
 
   def allPackages(campaignId: Int): List[Package] = db.withConnection(implicit connection =>
-    SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE package.campaign_id = {campaignId}")
+    SQL("SELECT package.name, phone, address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE package.campaign_id = {campaignId}")
       .on(
         Symbol("campaignId") -> campaignId
       )
@@ -40,7 +40,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   )
 
   def packagesByStatus(campaignId: Int, status: PackageStatus): List[Package] = db.withConnection(implicit connection =>
-    SQL(s"SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE status={status} AND campaign_id={campaignId}")
+    SQL(s"SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE status={status} AND campaign_id={campaignId}")
       .on(
         Symbol("status") -> status.id,
         Symbol("campaignId") -> campaignId
@@ -61,7 +61,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   def packagesByOfficer(campaignId: Int, officer: String, status: Option[PackageStatus]): List[Package] = db.withConnection{ implicit connection =>
     status match {
       case None =>
-        SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+        SQL("SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
           s"WHERE updated_by={officer} AND campaign_id={campaignId}")
           .on(
             Symbol("officer") -> officer,
@@ -70,7 +70,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
           .executeQuery().as(Package.parser.*)
 
       case Some(stt) =>
-        SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+        SQL("SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
           s"WHERE updated_by={officer} AND status={status} AND campaign_id={campaignId}")
           .on(
             Symbol("officer") -> officer,
@@ -82,7 +82,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }
 
   def packageByVerifyCode(code: String): Option[Package] = db.withConnection{implicit connection =>
-    SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+    SQL("SELECT package.name, phone, address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
       "WHERE verify_code={code}")
       .on(Symbol("code") -> code)
       .executeQuery().as(Package.parser.singleOpt)
@@ -113,17 +113,18 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }
 }
 
-case class Package(name: String, phone: String, status: PackageStatus, campaign: String, updatedAt: Option[Date])
+case class Package(name: String, phone: String, address: String, status: PackageStatus, campaign: String, updatedAt: Option[Date])
 
 object Package{
   val parser: RowParser[Package] = {
       SqlParser.get[String]("name") ~
       SqlParser.str("phone") ~
+      SqlParser.str("address") ~
       SqlParser.int("status") ~
       SqlParser.str("campaign") ~
       SqlParser.get[Option[Date]]("updated_at") map {
-        case name ~ phone ~ status ~ campaign ~ updatedDate =>
-          Package(name, phone, PackageStatus(status), campaign, updatedDate)
+        case name ~ phone ~ address ~ status ~ campaign ~ updatedDate =>
+          Package(name, phone, address, PackageStatus(status), campaign, updatedDate)
     }
   }
 
