@@ -17,10 +17,11 @@ import scala.util.{Failure, Try}
 class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRepository {
   private val logger = Logger(this.getClass)
   def create(pkg: CreatePackage): Future[Option[String]] = Future(db.withConnection{ implicit connection =>
-    SQL("INSERT INTO package(name, phone, campaign_id, verify_code) VALUES({name}, {phone}, {campaign_id}, {verify_code})").on(
+    SQL("INSERT INTO package(name, phone, campaign_id, verify_code, address) VALUES({name}, {phone}, {campaign_id}, {verify_code}, {address})").on(
         Symbol("name") -> pkg.name,
         Symbol("phone") ->pkg.phone,
         Symbol("campaign_id") -> pkg.campaignId,
+        Symbol("address") -> pkg.address,
         Symbol("verify_code") -> ""
     ).executeInsert(SqlParser.scalar[String].singleOpt)
   }).andThen{
@@ -57,11 +58,27 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
       ).executeUpdate()
   }).getOrElse(0)
 
-  def packagesByOfficer(officer: String): List[Package] = db.withConnection{implicit connection =>
-    SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
-      "WHERE updated_by={officer}")
-      .on(Symbol("officer") -> officer)
-      .executeQuery().as(Package.parser.*)
+  def packagesByOfficer(campaignId: Int, officer: String, status: Option[PackageStatus]): List[Package] = db.withConnection{ implicit connection =>
+    status match {
+      case None =>
+        SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+          s"WHERE updated_by={officer} AND campaign_id={campaignId}")
+          .on(
+            Symbol("officer") -> officer,
+            Symbol("campaignId") -> campaignId
+          )
+          .executeQuery().as(Package.parser.*)
+
+      case Some(stt) =>
+        SQL("SELECT package.name, phone, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
+          s"WHERE updated_by={officer} AND status={status} AND campaign_id={campaignId}")
+          .on(
+            Symbol("officer") -> officer,
+            Symbol("campaignId") -> campaignId,
+            Symbol("status") -> stt.id
+          )
+          .executeQuery().as(Package.parser.*)
+    }
   }
 
   def packageByVerifyCode(code: String): Option[Package] = db.withConnection{implicit connection =>

@@ -11,8 +11,8 @@ POST     /campaign            controllers.CampaignController.create
 GET     /campaign            controllers.CampaignController.create
 DELETE   /campaign/:id      controllers.CampaignController.delete(id: Int)
 POST     /packages/:campaignId            controllers.PackageController.create(campaignId: Int)
-GET      /packages/:campaignId            controllers.PackageController.allPackages(campaignId: Int)
-GET      /packages-by-status/:campaginId/:status            controllers.PackageController.packageByStatus(campaginId: Int, status: Int)
-POST     /officer/resend-verify-code        controllers.PackageController.resendVerifyCode
-POST     /officer/init-verify-code          controllers.PackageController.initVerifyCode
-GET     /officer/packages                  controllers.PackageController.packageByOfficer
+GET      /packages/:campaignId            controllers.PackageController.allPackages(campaignId: Int, status: Option[Int])
+POST     /officer/resend-verify-code      controllers.PackageController.resendVerifyCode
+POST     /officer/init-verify-code        controllers.PackageController.initVerifyCode
+
+GET      /officer/packages/:campaignId    controllers.PackageController.packageByOfficer(campaignId: Int, status: Option[Int])

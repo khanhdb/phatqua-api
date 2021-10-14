@@ -38,12 +38,13 @@ class PackageController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def packageByStatus(campaignId: Int, status: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
-    Ok(Json.toJson(packageRepository.packagesByStatus(campaignId, PackageStatus(status))))
-  }
-
-  def allPackages(campaignId: Int): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
-    Ok(Json.toJson(packageRepository.allPackages(campaignId)))
+  def allPackages(campaignId: Int, status: Option[Int]): Action[AnyContent] = loggedIn(parse.anyContent){ _ =>
+    status match {
+      case None =>
+        Ok(Json.toJson(packageRepository.allPackages(campaignId)))
+      case Some(stt) =>
+        Ok(Json.toJson(packageRepository.packagesByStatus(campaignId, PackageStatus(stt))))
+    }
   }
 
   def lookupCode(code: String): Action[AnyContent] = officerPermission(parse.anyContent) {_ =>
@@ -98,12 +99,12 @@ class PackageController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def packageByOfficer: Action[AnyContent] = officerPermission(parse.anyContent){request =>
-    Ok(Json.toJson(packageRepository.packagesByOfficer(request.username)))
+  def packageByOfficer(campaignId: Int, status: Option[Int]): Action[AnyContent] = officerPermission(parse.anyContent){request =>
+      Ok(Json.toJson(packageRepository.packagesByOfficer(campaignId, request.username, status.map(PackageStatus(_)))))
   }
 }
 
-case class CreatePackage(name: String, phone: String, campaignId: Int) {
+case class CreatePackage(name: String, phone: String, address: String, campaignId: Int) {
   def isValid: Boolean = phone.forall(_.isDigit)
 
   override def toString: String = {
@@ -116,7 +117,7 @@ object CreatePackage {
     Using(Source.fromFile(file)) { bufferedSource =>
       bufferedSource.getLines().map { line =>
         val cols = line.split(",").map(_.trim)
-        CreatePackage(cols(0), cols(1), campaignId)
+        CreatePackage(cols(0), cols(1), cols(2), campaignId)
       }.toList
     } match {
       case Success(value) => value
