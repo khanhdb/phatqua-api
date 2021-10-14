@@ -117,7 +117,8 @@ object CreatePackage {
     Using(Source.fromFile(file)) { bufferedSource =>
       bufferedSource.getLines().map { line =>
         val cols = line.split(",").map(_.trim)
-        CreatePackage(cols(0), cols(1), cols(2), campaignId)
+        val phone = "84" + cols(1).replaceFirst("^0*", "") // remove leading zeroes
+        CreatePackage(cols(0), phone, cols(2), campaignId)
       }.toList
     } match {
       case Success(value) => value
