@@ -1,6 +1,6 @@
 name := "chickenstar"
  
-version := "1.0"
+version := "1.1"
 
 val dockerSettings = Seq(
   maintainer := "khanhdb@sandinh.net",
