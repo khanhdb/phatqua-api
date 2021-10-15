@@ -5,9 +5,11 @@ CREATE TABLE `officer` (
                            PRIMARY KEY (`username`)
 );
 
-CREATE TABLE `package` (
+CREATE TABLE `package` (    `id` INT NOT NULL AUTO_INCREMENT,
                            `name` varchar(255) NOT NULL,
-                           `phone` varchar(20) NOT NULL,
+                           `phone` varchar(20),
+                           year_of_birth INT,
+                           address TEXT,
                            `note` TEXT,
                            `verify_code` varchar(30),
                            `status` INT NOT NULL DEFAULT 0,
@@ -15,8 +17,7 @@ CREATE TABLE `package` (
                            `updated_at` DATETIME,
                            `updated_by` varchar(255),
                            `campaign_id` INT NOT NULL,
-                            address TEXT,
-                           PRIMARY KEY (`phone`)
+                           PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `campaign` (

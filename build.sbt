@@ -1,8 +1,16 @@
 name := "chickenstar"
  
-version := "1.0" 
+version := "1.0"
+
+val dockerSettings = Seq(
+  maintainer := "khanhdb@sandinh.net",
+  dockerBaseImage := "openjdk:8",
+  dockerRepository := Some("r.bennuoc.com")
+)
       
-lazy val `chickenstar` = (project in file(".")).enablePlugins(PlayScala)
+lazy val `chickenstar` = (project in file("."))
+  .enablePlugins(PlayScala, DockerPlugin)
+  .settings(dockerSettings)
 
       
 resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
