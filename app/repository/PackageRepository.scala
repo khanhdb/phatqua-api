@@ -5,7 +5,7 @@ import controllers.CreatePackage
 import play.api.Logger
 import play.api.db.DBApi
 import play.api.libs.json._
-import repository.PackageStatus.{DONE, NEW, PLANNED, PackageStatus}
+import repository.PackageStatus.{DONE, PLANNED, PackageStatus}
 
 import java.util.Date
 import javax.inject.{Inject, Singleton}
@@ -16,14 +16,15 @@ import scala.util.{Failure, Try}
 @Singleton
 class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRepository {
   private val logger = Logger(this.getClass)
-  def create(pkg: CreatePackage): Future[Option[String]] = Future(db.withConnection{ implicit connection =>
-    SQL("INSERT INTO package(name, phone, campaign_id, verify_code, address) VALUES({name}, {phone}, {campaign_id}, {verify_code}, {address})").on(
+  def create(pkg: CreatePackage): Future[Option[Int]] = Future(db.withConnection{ implicit connection =>
+    SQL("INSERT INTO package(name, year_of_birth, phone, campaign_id, verify_code, address) VALUES({name},{year_of_birth}, {phone}, {campaign_id}, {verify_code}, {address})").on(
         Symbol("name") -> pkg.name,
         Symbol("phone") ->pkg.phone,
         Symbol("campaign_id") -> pkg.campaignId,
         Symbol("address") -> pkg.address,
-        Symbol("verify_code") -> ""
-    ).executeInsert(SqlParser.scalar[String].singleOpt)
+        Symbol("verify_code") -> "",
+        Symbol("year_of_birth") -> pkg.yearOfBirth
+    ).executeInsert(SqlParser.scalar[Int].singleOpt)
   }).andThen{
     case Failure(exception) =>
       exception.printStackTrace()
@@ -31,8 +32,12 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }
 
 
+  private val packageQueryString =
+    "SELECT package.name, year_of_birth, phone, address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id"
+
+
   def allPackages(campaignId: Int): List[Package] = db.withConnection(implicit connection =>
-    SQL("SELECT package.name, phone, address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE package.campaign_id = {campaignId}")
+    SQL(s"$packageQueryString WHERE package.campaign_id = {campaignId}")
       .on(
         Symbol("campaignId") -> campaignId
       )
@@ -40,7 +45,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   )
 
   def packagesByStatus(campaignId: Int, status: PackageStatus): List[Package] = db.withConnection(implicit connection =>
-    SQL(s"SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id WHERE status={status} AND campaign_id={campaignId}")
+    SQL(s"$packageQueryString WHERE status={status} AND campaign_id={campaignId}")
       .on(
         Symbol("status") -> status.id,
         Symbol("campaignId") -> campaignId
@@ -61,8 +66,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   def packagesByOfficer(campaignId: Int, officer: String, status: Option[PackageStatus]): List[Package] = db.withConnection{ implicit connection =>
     status match {
       case None =>
-        SQL("SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
-          s"WHERE updated_by={officer} AND campaign_id={campaignId}")
+        SQL(s"$packageQueryString WHERE updated_by={officer} AND campaign_id={campaignId}")
           .on(
             Symbol("officer") -> officer,
             Symbol("campaignId") -> campaignId
@@ -70,8 +74,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
           .executeQuery().as(Package.parser.*)
 
       case Some(stt) =>
-        SQL("SELECT package.name, phone,address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
-          s"WHERE updated_by={officer} AND status={status} AND campaign_id={campaignId}")
+        SQL(s"$packageQueryString WHERE updated_by={officer} AND status={status} AND campaign_id={campaignId}")
           .on(
             Symbol("officer") -> officer,
             Symbol("campaignId") -> campaignId,
@@ -82,8 +85,7 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }
 
   def packageByVerifyCode(code: String): Option[Package] = db.withConnection{implicit connection =>
-    SQL("SELECT package.name, phone, address, status, cam.name as campaign, package.updated_at FROM package JOIN campaign cam on cam.id = package.campaign_id " +
-      "WHERE verify_code={code}")
+    SQL(s"$packageQueryString WHERE verify_code={code}")
       .on(Symbol("code") -> code)
       .executeQuery().as(Package.parser.singleOpt)
   }
@@ -113,18 +115,19 @@ class PackageRepository @Inject()(override val dbAPI: DBApi) extends AbstractRep
   }
 }
 
-case class Package(name: String, phone: String, address: String, status: PackageStatus, campaign: String, updatedAt: Option[Date])
+case class Package(name: String,yearOfBirth: Int, phone: String, address: String, status: PackageStatus, campaign: String, updatedAt: Option[Date])
 
 object Package{
   val parser: RowParser[Package] = {
       SqlParser.get[String]("name") ~
+      SqlParser.int("year_of_birth") ~
       SqlParser.str("phone") ~
       SqlParser.str("address") ~
       SqlParser.int("status") ~
       SqlParser.str("campaign") ~
       SqlParser.get[Option[Date]]("updated_at") map {
-        case name ~ phone ~ address ~ status ~ campaign ~ updatedDate =>
-          Package(name, phone, address, PackageStatus(status), campaign, updatedDate)
+        case name ~ yearOfBirth ~ phone ~ address ~ status ~ campaign ~ updatedDate =>
+          Package(name, yearOfBirth, phone, address, PackageStatus(status), campaign, updatedDate)
     }
   }
 

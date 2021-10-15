@@ -13,7 +13,7 @@ import javax.inject._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.io.Source
-import scala.util.{Failure, Success, Using}
+import scala.util.{Failure, Success, Try, Using}
 
 
 @Singleton
@@ -104,7 +104,7 @@ class PackageController @Inject()(cc: ControllerComponents,
   }
 }
 
-case class CreatePackage(name: String, phone: String, address: String, campaignId: Int) {
+case class CreatePackage(name: String, yearOfBirth: Int, phone: String, address: String, campaignId: Int) {
   def isValid: Boolean = phone.forall(_.isDigit)
 
   override def toString: String = {
@@ -117,8 +117,8 @@ object CreatePackage {
     Using(Source.fromFile(file)) { bufferedSource =>
       bufferedSource.getLines().map { line =>
         val cols = line.split(",").map(_.trim)
-        val phone = "84" + cols(1).replaceFirst("^0*", "") // remove leading zeroes
-        CreatePackage(cols(0), phone, cols(2), campaignId)
+        val phone = "84" + cols(2).replaceFirst("^0*", "") // remove leading zeroes
+        CreatePackage(cols(0), Try(cols(1).toInt).getOrElse(0), phone, cols(3), campaignId)
       }.toList
     } match {
       case Success(value) => value
